@@ -1,0 +1,106 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+data = pd.read_csv('data.csv')
+
+# Drop the unnecessary columns
+if "Unnamed: 0" in data.columns:
+    data_clean = data.drop(columns=["Unnamed: 0"])
+else:
+    data_clean = data
+    
+
+# Print structure of cleaned data
+print("Data Cleaned Info:")
+print(data_clean.info())
+
+# Identify categorical columns
+categorical_columns = data_clean.select_dtypes(include=['object']).columns
+
+# Apply one-hot encoding to categorical columns
+data_encoded = pd.get_dummies(data_clean, columns=categorical_columns)
+
+# Print structure of encoded data
+print("Data Encoded Info:")
+print(data_encoded.info())
+
+# Apply K-Means clustering
+kmeans = KMeans(n_clusters=3, random_state=1234)  # Assuming we want 3 segments
+kmeans.fit(pca_df)
+segments = kmeans.labels_
+
+# Convert segments to a Series to ensure it's 1-dimensional
+segments_series = pd.Series(segments, name='Segment')
+
+# Print structure of segments series
+print("Segments Series Info:")
+print(segments_series.head())
+print("Segments Series Shape:", segments_series.shape)
+
+# Plot the distribution of segments
+plt.figure(figsize=(10, 6))
+sns.countplot(x=segments_series, palette='viridis')
+plt.title('Distribution of Segments')
+plt.xlabel('Segment')
+plt.ylabel('Count')
+plt.show()
+
+# Add the segments to the original DataFrame
+segment_analysis = pd.concat([data_clean.reset_index(drop=True), segments_series], axis=1)
+
+# Verify the structure of the DataFrame
+print("Segment Analysis DataFrame Info:")
+print(segment_analysis.info())
+
+# Inspect the first few rows to ensure the concatenation was successful
+print("Segment Analysis DataFrame:")
+print(segment_analysis.head())
+
+segment_analysis.columns.values[11] = 'New_Seg'
+plt.figure(figsize=(10, 6))
+sns.pairplot(data_clean.assign(Segment=segments_series), hue='Segment', palette='viridis')
+plt.title('Pairplot of Original Features by Segment')
+plt.show()
+
+# Standardize the data
+scaler = StandardScaler()
+scaled_data = scaler.fit_transform(data_encoded)
+
+# Apply PCA
+pca = PCA(n_components=2)  # Reduce to 2 components for visualization
+pca_data = pca.fit_transform(scaled_data)
+
+# Create a DataFrame with the principal components
+pca_df = pd.DataFrame(data=pca_data, columns=['PC1', 'PC2'])
+
+# Print structure of PCA data
+print("PCA Data Info:")
+print(pca_df.info())
+
+# Plot the PCA results with cluster assignments
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='PC1', y='PC2', hue=segments_series, palette='viridis', data=pca_df)
+plt.title('PCA of Market Segmentation')
+plt.show()
+# Ensure 'Segment' is 1-dimensional and correctly formatted
+if segment_analysis['Segment'].ndim == 1:
+    # Group by 'Segment' and calculate the mean
+    segment_summary = segment_analysis.groupby('Segment').mean()
+    print("Segment Summary:")
+    print(segment_summary)
+else:
+    print("Error: 'Segment' column is not 1-dimensional.")
+
+# Visualize the mean feature values for each segment
+plt.figure(figsize=(10, 6))
+segment_summary.plot(kind='bar')
+plt.title('Mean Feature Values by Segment')
+plt.xlabel('Segment')
+plt.ylabel('Mean Value')
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.show()
